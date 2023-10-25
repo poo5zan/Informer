@@ -3,3 +3,4 @@ dataset/
 *.npy
 *.pth
 .DS_Store
+*.csv
