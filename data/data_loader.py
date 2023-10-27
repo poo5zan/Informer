@@ -219,6 +219,8 @@ class Dataset_Custom(Dataset):
 
     def __read_data__(self):
         self.scaler = StandardScaler()
+        # stocks_data = np.load('/Users/pujanmaharjan/uni adelaide/research project/DeepTrader/src/data/DJIA/stocks_data.npy')
+
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
         '''
