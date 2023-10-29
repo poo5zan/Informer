@@ -23,10 +23,13 @@ args = dotdict()
 ROOT_DIR = './dataset/'
 args.is_time_id = True
 if args.is_time_id:
-    data_path = 'AAPL_reduced_time_id.csv'
+    # data_path = 'AAPL_reduced_time_id.csv'
+    # data_path = 'stock_data_targets.csv'
+    data_path = 'stock_data_tcn.csv'
 else:
     data_path = 'AAPL_reduced.csv'
-target_column = 'close'
+# target_column = 'close'
+target_column = 'stock_0'
 
 args.model = 'informer' # model of experiment, options: [informer, informerstack, informerlight(TBD)]
 
@@ -82,8 +85,6 @@ args.gpu = 0
 args.use_multi_gpu = False
 args.devices = '0,1,2,3'
 
-
-
 args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 
 if args.use_gpu and args.use_multi_gpu:
@@ -94,7 +95,12 @@ if args.use_gpu and args.use_multi_gpu:
 
 # Set augments by using data name
 data_parser = {
-    'custom':{'data':data_path,'T':target_column,'M':[5,5,5],'S':[1,1,1],'MS':[5,5,1]}, #Change the array here based on the number of features
+    'custom':{'data':data_path,
+              'T':target_column,
+              'M':[2,2,2],
+            #   'M':[5,5,5],
+              'S':[1,1,1],
+              'MS':[5,5,1]}, #Change the array here based on the number of features
 }
 if args.data in data_parser.keys():
     data_info = data_parser[args.data]
