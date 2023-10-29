@@ -33,7 +33,7 @@ args.model = 'informer' # model of experiment, options: [informer, informerstack
 args.data = 'custom' # data
 args.root_path =  ROOT_DIR#'/content/' # root path of data file
 args.data_path = data_path#'output.csv' # data file
-args.features = 'MS' # forecasting task, options:[M, S, MS];
+args.features = 'M' # forecasting task, options:[M, S, MS];
                     #M:multivariate predict multivariate, S:univariate predict univariate,
                     #MS:multivariate predict univariate
 args.target = target_column # target feature in S or MS task
@@ -94,7 +94,7 @@ if args.use_gpu and args.use_multi_gpu:
 
 # Set augments by using data name
 data_parser = {
-    'custom':{'data':data_path,'T':target_column,'M':[6,6,6],'S':[1,1,1],'MS':[5,5,1]}, #Change the array here based on the number of features
+    'custom':{'data':data_path,'T':target_column,'M':[5,5,5],'S':[1,1,1],'MS':[5,5,1]}, #Change the array here based on the number of features
 }
 if args.data in data_parser.keys():
     data_info = data_parser[args.data]
@@ -133,6 +133,8 @@ search_dir = "./informer_checkpoints/"
 dirs = os.listdir(search_dir)
 dir_list = []
 for d in dirs:
+    if d.lower() == '.ds_store':
+        continue
     date_change = os.path.getmtime(search_dir + d)
     dir_list.append({'directory_name': d, 'changed_date': date_change})
 
