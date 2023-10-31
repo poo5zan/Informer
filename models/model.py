@@ -25,6 +25,7 @@ class Informer(nn.Module):
         # Attention
         Attn = ProbAttention if attn=='prob' else FullAttention
         # Encoder
+        print('Number of encoder layers ', e_layers)
         self.encoder = Encoder(
             [
                 EncoderLayer(
@@ -44,6 +45,7 @@ class Informer(nn.Module):
             norm_layer=torch.nn.LayerNorm(d_model)
         )
         # Decoder
+        print('Number of decoder layers, ', d_layers)
         self.decoder = Decoder(
             [
                 DecoderLayer(
@@ -99,6 +101,7 @@ class InformerStack(nn.Module):
         Attn = ProbAttention if attn=='prob' else FullAttention
         # Encoder
 
+        print('Number of encoder layers ', e_layers)
         inp_lens = list(range(len(e_layers))) # [0,1,2,...] you can customize here
         encoders = [
             Encoder(
@@ -121,6 +124,7 @@ class InformerStack(nn.Module):
             ) for el in e_layers]
         self.encoder = EncoderStack(encoders, inp_lens)
         # Decoder
+        print('Number of decoder layers ', d_model)
         self.decoder = Decoder(
             [
                 DecoderLayer(
