@@ -26,7 +26,7 @@ def remove_directory(dir_path):
         print('removing directory ', dir_path)
         shutil.rmtree(dir_path)
 
-def plot_predictions(trues, preds, start_index, step, num_plots):
+def plot_predictions(trues, preds, start_index, step, num_plots, setting):
         num_rows = num_plots // 3
         num_cols = 3
 
@@ -50,6 +50,7 @@ def plot_predictions(trues, preds, start_index, step, num_plots):
 
 
         plt.tight_layout()
+        plt.savefig('./results/'+setting+'/prediction_plot.png')
         plt.show()
 
 def run_volatility(args):    
@@ -127,6 +128,7 @@ def run_volatility(args):
     print('Args in experiment:')
     print(args)
 
+    error_mertics = {}
     for ii in range(args.itr):
         # setting record of experiments
         setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_eb{}_dt{}_mx{}_{}_{}'.format(args.model, args.data, args.features,
@@ -142,7 +144,7 @@ def run_volatility(args):
 
         # test
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.test(setting)
+        error_mertics = exp.test(setting)
 
         print('Finished training')
         # torch.cuda.empty_cache()
@@ -212,46 +214,66 @@ def run_volatility(args):
     # [samples, pred_len, dimensions]
     preds.shape, trues.shape
 
-    plot_predictions(trues, preds, start_index=0, step=50, num_plots=6)
+    plot_predictions(trues, preds, start_index=0, step=50, num_plots=6, setting = setting)
+
+    return error_mertics
 
 # run 1
 args = dotdict()
 args.target_config_list_ms = []
 args.e_layers = 2 # num of encoder layers
 args.d_layers = 1 # num of decoder layers
-args.learning_rate = 0.0001 # 0.0001
-args.train_epochs = 20
+args.learning_rate = 0.001 # 0.0001
+args.train_epochs = 50
+
+error_metrics_all = []
+
+run_1 = False
+run_2 = True
+run_3= False
 
 # Run 1
-# args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
-# args.target = 'stock_0' # target feature in S or MS task
-# args.features = 'M' # forecasting task, options:[M, S, MS];
-#                         #M:multivariate predict multivariate, S:univariate predict univariate,
-#                         #MS:multivariate predict univariate
-# args.target_config_list_m = [2,2,2]
-# args.is_time_id = True
-# run_volatility(args)
+if run_1:
+    args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
+    args.target = 'stock_0' # target feature in S or MS task
+    args.features = 'M' # forecasting task, options:[M, S, MS];
+                            #M:multivariate predict multivariate, S:univariate predict univariate,
+                            #MS:multivariate predict univariate
+    m_feature_count = len(pd.read_csv("./dataset/stock_data_targets.csv").columns) - 1
+    args.target_config_list_m = [m_feature_count, m_feature_count, m_feature_count]
+    args.is_time_id = True
+    error_metrics_targets = run_volatility(args)
+    error_metrics_all.append(error_metrics_targets)
 
 # run 2
-# args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
-# args.target = 'stock_0_y' # target feature in S or MS task
-# args.features = 'M'
-# args.target_config_list_m = [4,4,4]
-# args.is_time_id = True
-# run_volatility(args)
+if run_2:
+    args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
+    args.target = 'stock_0_y' # target feature in S or MS task
+    args.features = 'M'
+    feature_count = len(pd.read_csv("./dataset/stock_data_tcn_targets.csv").columns) - 1
+    args.target_config_list_m = [feature_count, feature_count, feature_count]
+    args.is_time_id = True
+    error_metrics_tcn = run_volatility(args)
+    error_metrics_all.append(error_metrics_tcn)
 
 # run 3
-# args.data_path = 'stock_0_features.csv' #'output.csv' # data file
-# args.target = 'target' # target feature in S or MS task
-# args.features = 'MS'
-# args.target_config_list_ms = [9,9,1]
-# args.is_time_id = True
-# run_volatility(args)
+if run_3:
+    args.data_path = 'stock_0_features.csv' #'output.csv' # data file
+    args.target = 'target' # target feature in S or MS task
+    args.features = 'MS'
+    args.target_config_list_ms = [9,9,1]
+    args.is_time_id = True
+    error_metrics_features = run_volatility(args)
+    error_metrics_all.append(error_metrics_features)
 
 # run 4 date
-args.data_path = 'AAPL_reduced.csv' #'output.csv' # data file
-args.target = 'close' # target feature in S or MS task
-args.features = 'MS'
-args.target_config_list_ms = [5,5,1]
-args.is_time_id = False
-run_volatility(args)
+# args.data_path = 'AAPL_reduced.csv' #'output.csv' # data file
+# args.target = 'close' # target feature in S or MS task
+# args.features = 'MS'
+# args.target_config_list_ms = [5,5,1]
+# args.is_time_id = False
+# run_volatility(args)
+
+print('error metrics all ', error_metrics_all)
+error_metrics_df = pd.DataFrame(error_metrics_all)
+print(error_metrics_df)

@@ -4,3 +4,4 @@ dataset/
 *.pth
 .DS_Store
 *.csv
+results/
