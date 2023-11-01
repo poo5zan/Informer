@@ -55,7 +55,7 @@ def run_volatility(args):
     remove_directory('./results/')  
 
     ROOT_DIR = './dataset/'
-    args.is_time_id = True    
+        
     args.model = 'informer' # model of experiment, options: [informer, informerstack, informerlight(TBD)]
     args.data = 'custom' # data
     args.root_path =  ROOT_DIR#'/content/' # root path of data file
@@ -221,19 +221,21 @@ args.learning_rate = 0.001 # 0.0001
 args.train_epochs = 20
 
 # Run 1
-args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
-args.target = 'stock_0' # target feature in S or MS task
-args.features = 'M' # forecasting task, options:[M, S, MS];
-                        #M:multivariate predict multivariate, S:univariate predict univariate,
-                        #MS:multivariate predict univariate
-args.target_config_list_m = [2,2,2]
+# args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
+# args.target = 'stock_0' # target feature in S or MS task
+# args.features = 'M' # forecasting task, options:[M, S, MS];
+#                         #M:multivariate predict multivariate, S:univariate predict univariate,
+#                         #MS:multivariate predict univariate
+# args.target_config_list_m = [2,2,2]
+# args.is_time_id = True
 # run_volatility(args)
 
 # run 2
-args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
-args.target = 'stock_0_y' # target feature in S or MS task
-args.features = 'M'
-args.target_config_list_m = [4,4,4]
+# args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
+# args.target = 'stock_0_y' # target feature in S or MS task
+# args.features = 'M'
+# args.target_config_list_m = [4,4,4]
+# args.is_time_id = True
 # run_volatility(args)
 
 # run 3
@@ -241,5 +243,13 @@ args.target_config_list_m = [4,4,4]
 # args.target = 'target' # target feature in S or MS task
 # args.features = 'MS'
 # args.target_config_list_ms = [9,9,1]
+# args.is_time_id = True
 # run_volatility(args)
 
+# run 4 date
+args.data_path = 'AAPL_reduced.csv' #'output.csv' # data file
+args.target = 'close' # target feature in S or MS task
+args.features = 'MS'
+args.target_config_list_ms = [5,5,1]
+args.is_time_id = False
+run_volatility(args)
