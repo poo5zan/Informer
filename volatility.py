@@ -1,3 +1,5 @@
+# reference: https://zenn.dev/ryo_tan/articles/5d03c0157501aa
+
 import os
 import sys
 if not 'Informer2020' in sys.path:
@@ -63,11 +65,11 @@ def run_volatility(args):
     args.checkpoints = './informer_checkpoints' # location of model checkpoints
     args.seq_len = 96 # input sequence length of Informer encoder
     args.label_len = 48 # start token length of Informer decoder
-    args.pred_len = 24 # prediction sequence length
+    args.pred_len = 84 # prediction sequence length
     # Informer decoder input: concat[start token series(label_len), zero padding series(pred_len)]
-    args.enc_in = 7 # encoder input size
-    args.dec_in = 7 # decoder input size
-    args.c_out = 7 # output size
+    args.enc_in = 8 # encoder input size
+    args.dec_in = 8 # decoder input size
+    args.c_out = 8 # output size
     args.factor = 5 # probsparse attn factor
     args.d_model = 512 # dimension of model
     args.n_heads = 8 # num of heads
@@ -86,7 +88,7 @@ def run_volatility(args):
     args.lradj = 'type1'
     args.use_amp = False # whether to use automatic mixed precision training
     args.num_workers = 0
-    args.itr = 2
+    args.itr = 1
     args.patience = 3
     args.des = 'exp'
     args.use_gpu = True if torch.cuda.is_available() else False
@@ -217,7 +219,7 @@ args = dotdict()
 args.target_config_list_ms = []
 args.e_layers = 2 # num of encoder layers
 args.d_layers = 1 # num of decoder layers
-args.learning_rate = 0.001 # 0.0001
+args.learning_rate = 0.0001 # 0.0001
 args.train_epochs = 20
 
 # Run 1
