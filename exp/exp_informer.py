@@ -144,6 +144,7 @@ class Exp_Informer(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        losses = []
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -182,6 +183,11 @@ class Exp_Informer(Exp_Basic):
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+            losses.append({'epoch': epoch + 1,
+                           'train_steps': train_steps,
+                           'train_loss': train_loss,
+                           'validation_loss': vali_loss,
+                           'test_loss': test_loss})
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -192,7 +198,7 @@ class Exp_Informer(Exp_Basic):
         best_model_path = path+'/'+'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
         
-        return self.model
+        return (self.model, losses)
 
     def test(self, setting):
         test_data, test_loader = self._get_data(flag='test')
@@ -256,7 +262,7 @@ class Exp_Informer(Exp_Basic):
         
         np.save(folder_path+'real_prediction.npy', preds)
         
-        return
+        return preds
 
     def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
         batch_x = batch_x.float().to(self.device)
@@ -284,6 +290,7 @@ class Exp_Informer(Exp_Basic):
             else:
                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
         if self.args.inverse:
+            # print('inverse transform output')
             outputs = dataset_object.inverse_transform(outputs)
         f_dim = -1 if self.args.features=='MS' else 0
         batch_y = batch_y[:,-self.args.pred_len:,f_dim:].to(self.device)

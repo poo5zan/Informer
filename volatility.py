@@ -97,6 +97,7 @@ def run_volatility(args):
     args.use_multi_gpu = False
     args.devices = '0,1,2,3'
     args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
+    args.inverse = True
 
     if args.use_gpu and args.use_multi_gpu:
         args.devices = args.devices.replace(' ','')
@@ -129,6 +130,7 @@ def run_volatility(args):
     print(args)
 
     error_mertics = {}
+    losses = None
     for ii in range(args.itr):
         # setting record of experiments
         setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_eb{}_dt{}_mx{}_{}_{}'.format(args.model, args.data, args.features,
@@ -140,7 +142,7 @@ def run_volatility(args):
 
         # train
         print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
-        exp.train(setting)
+        model, losses = exp.train(setting)
 
         # test
         print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
@@ -216,22 +218,23 @@ def run_volatility(args):
 
     plot_predictions(trues, preds, start_index=0, step=50, num_plots=6, setting = setting)
 
-    return error_mertics
+    return error_mertics, losses
 
 # run 1
 args = dotdict()
 args.target_config_list_ms = []
 args.e_layers = 2 # num of encoder layers
-args.d_layers = 1 # num of decoder layers
-args.learning_rate = 0.001 # 0.0001
-args.train_epochs = 50
+args.d_layers = 2 # num of decoder layers
+args.learning_rate = 0.0001 # 0.0001
+args.train_epochs = 20
 
 error_metrics_all = []
+losses_all = []
 
 run_1 = False
 run_2 = True
 run_3= False
-
+ 
 # Run 1
 if run_1:
     args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
@@ -242,8 +245,9 @@ if run_1:
     m_feature_count = len(pd.read_csv("./dataset/stock_data_targets.csv").columns) - 1
     args.target_config_list_m = [m_feature_count, m_feature_count, m_feature_count]
     args.is_time_id = True
-    error_metrics_targets = run_volatility(args)
+    error_metrics_targets, losses_run_1 = run_volatility(args)
     error_metrics_all.append(error_metrics_targets)
+    losses_all.append(losses_run_1)
 
 # run 2
 if run_2:
@@ -253,8 +257,9 @@ if run_2:
     feature_count = len(pd.read_csv("./dataset/stock_data_tcn_targets.csv").columns) - 1
     args.target_config_list_m = [feature_count, feature_count, feature_count]
     args.is_time_id = True
-    error_metrics_tcn = run_volatility(args)
+    error_metrics_tcn, losses_run_2 = run_volatility(args)
     error_metrics_all.append(error_metrics_tcn)
+    losses_all.append(losses_run_2)
 
 # run 3
 if run_3:
@@ -263,8 +268,9 @@ if run_3:
     args.features = 'MS'
     args.target_config_list_ms = [9,9,1]
     args.is_time_id = True
-    error_metrics_features = run_volatility(args)
+    error_metrics_features, losses_run_3 = run_volatility(args)
     error_metrics_all.append(error_metrics_features)
+    losses_all.append(losses_run_3)
 
 # run 4 date
 # args.data_path = 'AAPL_reduced.csv' #'output.csv' # data file
@@ -277,3 +283,36 @@ if run_3:
 print('error metrics all ', error_metrics_all)
 error_metrics_df = pd.DataFrame(error_metrics_all)
 print(error_metrics_df)
+
+def drawplots(epochs, train_loss, validation_loss, test_loss,title):
+    plt.plot(epochs, train_loss, label="train")
+    plt.plot(epochs, validation_loss, label="validation")
+    plt.plot(epochs, test_loss, label="test")
+    plt.title(title)
+    plt.legend()
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.savefig('./dataset/' + title + '.png')
+    plt.show()
+
+def drawplot(epochs, losses, title):
+    plt.plot(epochs, losses)
+    plt.title(title)
+    plt.legend()
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.savefig('./dataset/' + title + '.png')
+    plt.show()
+
+# print(losses)
+first_loss = losses_all[0]
+print(first_loss)
+epochs = [f['epoch'] for f in first_loss]
+print(epochs)
+train_losses = [f['train_loss'] for f in first_loss]
+validation_losses = [f['validation_loss'] for f in first_loss]
+test_losses = [f['test_loss'] for f in first_loss]
+drawplots(epochs, train_losses, validation_losses, test_losses, 'Loss curves')
+drawplot(epochs, train_losses, 'Train loss')
+drawplot(epochs, validation_losses, 'Validation loss')
+drawplot(epochs, test_losses, 'Test loss')
