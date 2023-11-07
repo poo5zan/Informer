@@ -54,8 +54,8 @@ def plot_predictions(trues, preds, start_index, step, num_plots, setting):
         plt.show()
 
 def run_volatility(args):    
-    remove_directory('./informer_checkpoints/')
-    remove_directory('./results/')  
+    # remove_directory('./informer_checkpoints/')
+    # remove_directory('./results/')  
 
     ROOT_DIR = './dataset/'
         
@@ -66,12 +66,12 @@ def run_volatility(args):
     args.checkpoints = './informer_checkpoints' # location of model checkpoints
     args.seq_len = 96 # input sequence length of Informer encoder
     args.label_len = 48 # start token length of Informer decoder
-    args.pred_len = 84 # prediction sequence length
+    args.pred_len = 24 # prediction sequence length
     # Informer decoder input: concat[start token series(label_len), zero padding series(pred_len)]
     args.enc_in = 8 # encoder input size
     args.dec_in = 8 # decoder input size
     args.c_out = 8 # output size
-    args.factor = 5 # probsparse attn factor
+    args.factor = 1 # probsparse attn factor
     args.d_model = 512 # dimension of model
     args.n_heads = 8 # num of heads
     args.d_ff = 2048 # dimension of fcn in model
@@ -133,9 +133,12 @@ def run_volatility(args):
     losses = None
     for ii in range(args.itr):
         # setting record of experiments
-        setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_eb{}_dt{}_mx{}_{}_{}'.format(args.model, args.data, args.features,
+        setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_eb{}_dt{}_mx{}_{}_{}'.format(
+                    args.model_id,
+                    args.model, args.data, args.features,
                     args.seq_len, args.label_len, args.pred_len,
-                    args.d_model, args.n_heads, args.e_layers, args.d_layers, args.d_ff, args.attn, args.factor, args.embed, args.distil, args.mix, args.des, ii)
+                    args.d_model, args.n_heads, args.e_layers, args.d_layers, args.d_ff, args.attn, 
+                    args.factor, args.embed, args.distil, args.mix, args.des, ii)
 
         # set experiments
         exp = Exp(args)
@@ -218,18 +221,19 @@ def run_volatility(args):
 
     plot_predictions(trues, preds, start_index=0, step=50, num_plots=6, setting = setting)
 
-    return error_mertics, losses
+    return error_mertics, losses, setting
 
 # run 1
 args = dotdict()
 args.target_config_list_ms = []
 args.e_layers = 2 # num of encoder layers
-args.d_layers = 2 # num of decoder layers
+args.d_layers = 1 # num of decoder layers
 args.learning_rate = 0.0001 # 0.0001
 args.train_epochs = 20
 
 error_metrics_all = []
 losses_all = []
+setting = ""
 
 run_1 = False
 run_2 = True
@@ -245,7 +249,8 @@ if run_1:
     m_feature_count = len(pd.read_csv("./dataset/stock_data_targets.csv").columns) - 1
     args.target_config_list_m = [m_feature_count, m_feature_count, m_feature_count]
     args.is_time_id = True
-    error_metrics_targets, losses_run_1 = run_volatility(args)
+    args.model_id = 'run_1'
+    error_metrics_targets, losses_run_1, setting = run_volatility(args)
     error_metrics_all.append(error_metrics_targets)
     losses_all.append(losses_run_1)
 
@@ -257,7 +262,8 @@ if run_2:
     feature_count = len(pd.read_csv("./dataset/stock_data_tcn_targets.csv").columns) - 1
     args.target_config_list_m = [feature_count, feature_count, feature_count]
     args.is_time_id = True
-    error_metrics_tcn, losses_run_2 = run_volatility(args)
+    args.model_id = 'run_2'
+    error_metrics_tcn, losses_run_2, setting = run_volatility(args)
     error_metrics_all.append(error_metrics_tcn)
     losses_all.append(losses_run_2)
 
@@ -268,7 +274,8 @@ if run_3:
     args.features = 'MS'
     args.target_config_list_ms = [9,9,1]
     args.is_time_id = True
-    error_metrics_features, losses_run_3 = run_volatility(args)
+    args.model_id = 'run_3'
+    error_metrics_features, losses_run_3, setting = run_volatility(args)
     error_metrics_all.append(error_metrics_features)
     losses_all.append(losses_run_3)
 
@@ -284,7 +291,7 @@ print('error metrics all ', error_metrics_all)
 error_metrics_df = pd.DataFrame(error_metrics_all)
 print(error_metrics_df)
 
-def drawplots(epochs, train_loss, validation_loss, test_loss,title):
+def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting):
     plt.plot(epochs, train_loss, label="train")
     plt.plot(epochs, validation_loss, label="validation")
     plt.plot(epochs, test_loss, label="test")
@@ -292,16 +299,16 @@ def drawplots(epochs, train_loss, validation_loss, test_loss,title):
     plt.legend()
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.savefig('./dataset/' + title + '.png')
+    plt.savefig('./results/' + setting + "/" + title + '.png')
     plt.show()
 
-def drawplot(epochs, losses, title):
+def drawplot(epochs, losses, title, setting):
     plt.plot(epochs, losses)
     plt.title(title)
     plt.legend()
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.savefig('./dataset/' + title + '.png')
+    plt.savefig('./results/' + setting + "/" + title + '.png')
     plt.show()
 
 # print(losses)
@@ -312,7 +319,9 @@ print(epochs)
 train_losses = [f['train_loss'] for f in first_loss]
 validation_losses = [f['validation_loss'] for f in first_loss]
 test_losses = [f['test_loss'] for f in first_loss]
-drawplots(epochs, train_losses, validation_losses, test_losses, 'Loss curves')
-drawplot(epochs, train_losses, 'Train loss')
-drawplot(epochs, validation_losses, 'Validation loss')
-drawplot(epochs, test_losses, 'Test loss')
+
+
+drawplots(epochs, train_losses, validation_losses, test_losses, ' Loss curves', setting)
+drawplot(epochs, train_losses, ' Train loss', setting)
+drawplot(epochs, validation_losses, ' Validation loss', setting)
+drawplot(epochs, test_losses, ' Test loss', setting)
