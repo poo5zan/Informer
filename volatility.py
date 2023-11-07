@@ -236,8 +236,8 @@ losses_all = []
 setting = ""
 
 run_1 = False
-run_2 = True
-run_3= False
+run_2 = False
+run_3= True
  
 # Run 1
 if run_1:
@@ -290,6 +290,11 @@ if run_3:
 print('error metrics all ', error_metrics_all)
 error_metrics_df = pd.DataFrame(error_metrics_all)
 print(error_metrics_df)
+error_metrics_df.to_csv("./results/" + setting + "/error_metrics.csv", index=False)
+
+losses_df = pd.DataFrame(losses_all[0])
+losses_df.to_csv("./results/" + setting + "/losses.csv", index=False)
+
 
 def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting):
     plt.plot(epochs, train_loss, label="train")
@@ -305,7 +310,6 @@ def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting):
 def drawplot(epochs, losses, title, setting):
     plt.plot(epochs, losses)
     plt.title(title)
-    plt.legend()
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.savefig('./results/' + setting + "/" + title + '.png')
@@ -321,7 +325,7 @@ validation_losses = [f['validation_loss'] for f in first_loss]
 test_losses = [f['test_loss'] for f in first_loss]
 
 
-drawplots(epochs, train_losses, validation_losses, test_losses, ' Loss curves', setting)
-drawplot(epochs, train_losses, ' Train loss', setting)
-drawplot(epochs, validation_losses, ' Validation loss', setting)
-drawplot(epochs, test_losses, ' Test loss', setting)
+drawplots(epochs, train_losses, validation_losses, test_losses, 'Loss curves', setting)
+drawplot(epochs, train_losses, 'Train loss', setting)
+drawplot(epochs, validation_losses, 'Validation loss', setting)
+drawplot(epochs, test_losses, 'Test loss', setting)
