@@ -50,7 +50,8 @@ class Exp_Informer(Exp_Basic):
                 self.args.output_attention,
                 self.args.distil,
                 self.args.mix,
-                self.device
+                self.device,
+                self.args.is_time_id,
             ).float()
         
         if self.args.use_multi_gpu and self.args.use_gpu:
@@ -82,6 +83,7 @@ class Exp_Informer(Exp_Basic):
             shuffle_flag = True; drop_last = True; batch_size = args.batch_size; freq=args.freq
         data_set = Data(
             root_path=args.root_path,
+            is_time_id=args.is_time_id,
             data_path=args.data_path,
             flag=flag,
             size=[args.seq_len, args.label_len, args.pred_len],
@@ -142,6 +144,7 @@ class Exp_Informer(Exp_Basic):
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+        losses = []
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -173,13 +176,20 @@ class Exp_Informer(Exp_Basic):
                     loss.backward()
                     model_optim.step()
 
-            print("Epoch: {} cost time: {}".format(epoch+1, time.time()-epoch_time))
+            cost_time = time.time()-epoch_time
+            print("Epoch: {} cost time: {}".format(epoch+1, cost_time))
             train_loss = np.average(train_loss)
             vali_loss = self.vali(vali_data, vali_loader, criterion)
             test_loss = self.vali(test_data, test_loader, criterion)
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+            losses.append({'epoch': epoch + 1,
+                           'train_steps': train_steps,
+                           'train_loss': train_loss,
+                           'validation_loss': vali_loss,
+                           'test_loss': test_loss,
+                           'cost_time': cost_time})
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
@@ -190,7 +200,7 @@ class Exp_Informer(Exp_Basic):
         best_model_path = path+'/'+'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
         
-        return self.model
+        return (self.model, losses)
 
     def test(self, setting):
         test_data, test_loader = self._get_data(flag='test')
@@ -225,7 +235,7 @@ class Exp_Informer(Exp_Basic):
         np.save(folder_path+'pred.npy', preds)
         np.save(folder_path+'true.npy', trues)
 
-        return
+        return {'mae':mae, 'mse':mse, 'rmse':rmse, 'mape': mape, 'mspe': mspe}
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
@@ -254,7 +264,7 @@ class Exp_Informer(Exp_Basic):
         
         np.save(folder_path+'real_prediction.npy', preds)
         
-        return
+        return preds
 
     def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
         batch_x = batch_x.float().to(self.device)
@@ -282,6 +292,7 @@ class Exp_Informer(Exp_Basic):
             else:
                 outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
         if self.args.inverse:
+            # print('inverse transform output')
             outputs = dataset_object.inverse_transform(outputs)
         f_dim = -1 if self.args.features=='MS' else 0
         batch_y = batch_y[:,-self.args.pred_len:,f_dim:].to(self.device)

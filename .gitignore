@@ -1,0 +1,7 @@
+dataset/
+*.pyc
+*.npy
+*.pth
+.DS_Store
+*.csv
+results/
