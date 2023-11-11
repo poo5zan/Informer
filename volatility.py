@@ -228,7 +228,7 @@ args = dotdict()
 args.target_config_list_ms = []
 args.e_layers = 2 # num of encoder layers
 args.d_layers = 1 # num of decoder layers
-args.learning_rate = 0.0001 # 0.0001
+args.learning_rate = 0.00001 # 0.0001
 args.train_epochs = 20
 
 error_metrics_all = []
