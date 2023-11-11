@@ -2,8 +2,8 @@
 
 import os
 import sys
-if not 'Informer2020' in sys.path:
-    sys.path += ['Informer2020']
+if not 'Informer' in sys.path:
+    sys.path += ['Informer']
 
 from utils.tools import dotdict
 from exp.exp_informer import Exp_Informer
@@ -26,7 +26,13 @@ def remove_directory(dir_path):
         print('removing directory ', dir_path)
         shutil.rmtree(dir_path)
 
-def plot_predictions(trues, preds, start_index, step, num_plots, setting):
+def make_directory(dir_path):
+    if not os.path.exists(dir_path):
+        print('creating dir ', dir_path)
+        os.mkdir(dir_path)
+
+
+def plot_predictions(trues, preds, start_index, step, num_plots, setting, root_path):
         num_rows = num_plots // 3
         num_cols = 3
 
@@ -50,18 +56,14 @@ def plot_predictions(trues, preds, start_index, step, num_plots, setting):
 
 
         plt.tight_layout()
-        plt.savefig('./results/'+setting+'/prediction_plot.png')
         plt.show()
+        plt.savefig(os.path.join(root_path, '/results_informer/'+setting+'/prediction_plot.png'))
+        
 
 def run_volatility(args):    
-    # remove_directory('./informer_checkpoints/')
-    # remove_directory('./results/')  
-
-    ROOT_DIR = './dataset/'
-        
     args.model = 'informer' # model of experiment, options: [informer, informerstack, informerlight(TBD)]
     args.data = 'custom' # data
-    args.root_path =  ROOT_DIR#'/content/' # root path of data file
+    # args.root_path =  ROOT_DIR#'/content/' # root path of data file
     args.freq = '1m' # freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h
     args.checkpoints = './informer_checkpoints' # location of model checkpoints
     args.seq_len = 96 # input sequence length of Informer encoder
@@ -90,7 +92,7 @@ def run_volatility(args):
     args.use_amp = False # whether to use automatic mixed precision training
     args.num_workers = 0
     args.itr = 1
-    args.patience = 3
+    args.patience = 100
     args.des = 'exp'
     args.use_gpu = True if torch.cuda.is_available() else False
     args.gpu = 0
@@ -109,10 +111,7 @@ def run_volatility(args):
     data_parser = {
         'custom':{'data':args.data_path,
                 'T':args.target,
-                #   'M':[2,2,2],
-                # 'M':[4,4,4],
                 'M': args.target_config_list_m,
-                #   'M':[5,5,5],
                 'S':[1,1,1],
                 'MS': args.target_config_list_ms}, #Change the array here based on the number of features
     }
@@ -131,6 +130,7 @@ def run_volatility(args):
 
     error_mertics = {}
     losses = None
+    setting = ''
     for ii in range(args.itr):
         # setting record of experiments
         setting = '{}_{}_{}_ft{}_sl{}_ll{}_pl{}_dm{}_nh{}_el{}_dl{}_df{}_at{}_fc{}_eb{}_dt{}_mx{}_{}_{}'.format(
@@ -152,26 +152,8 @@ def run_volatility(args):
         error_mertics = exp.test(setting)
 
         print('Finished training')
-        # torch.cuda.empty_cache()
 
-    search_dir = "./informer_checkpoints/"
-    dirs = os.listdir(search_dir)
-    dir_list = []
-    for d in dirs:
-        if d.lower() == '.ds_store':
-            continue
-        date_change = os.path.getmtime(search_dir + d)
-        dir_list.append({'directory_name': d, 'changed_date': date_change})
-
-    # sorted(dir_list, key=lambda x: x['changed_date'], reverse=True)[0]['directory_name']
-
-    # set saved model path
-    # setting = 'informer_custom_ftMS_sl96_ll48_pl84_dm512_nh8_el2_dl1_df2048_atprob_fc5_ebtimeF_dtTrue_mxTrue_exp_0'
-    setting = sorted(dir_list, key=lambda x: x['changed_date'], reverse=True)[0]['directory_name']
     print('setting folder ', setting)
-    # path = os.path.join(args.checkpoints,setting,'checkpoint.pth')
-
-
     # If you already have a trained model, you can set the arguments and model path, then initialize a Experiment and use it to predict
     # Prediction is a sequence which is adjacent to the last date of the data, and does not exist in the data
     # If you want to get more information about prediction, you can refer to code `exp/exp_informer.py function predict()` and `data/data_loader.py class Dataset_Pred`
@@ -180,7 +162,7 @@ def run_volatility(args):
 
     exp.predict(setting, True)
 
-    prediction = np.load('./results/'+setting+'/real_prediction.npy')
+    prediction = np.load( './results/'+setting+'/real_prediction.npy')
 
     prediction.shape
 
@@ -219,84 +201,11 @@ def run_volatility(args):
     # [samples, pred_len, dimensions]
     preds.shape, trues.shape
 
-    plot_predictions(trues, preds, start_index=0, step=50, num_plots=6, setting = setting)
+    plot_predictions(trues, preds, start_index=0, step=50, num_plots=6, setting = setting, root_path=args.root_path)
 
     return error_mertics, losses, setting
 
-# run 1
-args = dotdict()
-args.target_config_list_ms = []
-args.e_layers = 2 # num of encoder layers
-args.d_layers = 1 # num of decoder layers
-args.learning_rate = 0.00001 # 0.0001
-args.train_epochs = 20
-
-error_metrics_all = []
-losses_all = []
-setting = ""
-
-run_1 = False
-run_2 = False
-run_3= True
- 
-# Run 1
-if run_1:
-    args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
-    args.target = 'stock_0' # target feature in S or MS task
-    args.features = 'M' # forecasting task, options:[M, S, MS];
-                            #M:multivariate predict multivariate, S:univariate predict univariate,
-                            #MS:multivariate predict univariate
-    m_feature_count = len(pd.read_csv("./dataset/stock_data_targets.csv").columns) - 1
-    args.target_config_list_m = [m_feature_count, m_feature_count, m_feature_count]
-    args.is_time_id = True
-    args.model_id = 'run_1'
-    error_metrics_targets, losses_run_1, setting = run_volatility(args)
-    error_metrics_all.append(error_metrics_targets)
-    losses_all.append(losses_run_1)
-
-# run 2
-if run_2:
-    args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
-    args.target = 'stock_0_y' # target feature in S or MS task
-    args.features = 'M'
-    feature_count = len(pd.read_csv("./dataset/stock_data_tcn_targets.csv").columns) - 1
-    args.target_config_list_m = [feature_count, feature_count, feature_count]
-    args.is_time_id = True
-    args.model_id = 'run_2'
-    error_metrics_tcn, losses_run_2, setting = run_volatility(args)
-    error_metrics_all.append(error_metrics_tcn)
-    losses_all.append(losses_run_2)
-
-# run 3
-if run_3:
-    args.data_path = 'stock_0_features.csv' #'output.csv' # data file
-    args.target = 'target' # target feature in S or MS task
-    args.features = 'MS'
-    args.target_config_list_ms = [9,9,1]
-    args.is_time_id = True
-    args.model_id = 'run_3'
-    error_metrics_features, losses_run_3, setting = run_volatility(args)
-    error_metrics_all.append(error_metrics_features)
-    losses_all.append(losses_run_3)
-
-# run 4 date
-# args.data_path = 'AAPL_reduced.csv' #'output.csv' # data file
-# args.target = 'close' # target feature in S or MS task
-# args.features = 'MS'
-# args.target_config_list_ms = [5,5,1]
-# args.is_time_id = False
-# run_volatility(args)
-
-print('error metrics all ', error_metrics_all)
-error_metrics_df = pd.DataFrame(error_metrics_all)
-print(error_metrics_df)
-error_metrics_df.to_csv("./results/" + setting + "/error_metrics.csv", index=False)
-
-losses_df = pd.DataFrame(losses_all[0])
-losses_df.to_csv("./results/" + setting + "/losses.csv", index=False)
-
-
-def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting):
+def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting, root_path):
     plt.plot(epochs, train_loss, label="train")
     plt.plot(epochs, validation_loss, label="validation")
     plt.plot(epochs, test_loss, label="test")
@@ -304,28 +213,101 @@ def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting):
     plt.legend()
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.savefig('./results/' + setting + "/" + title + '.png')
     plt.show()
-
-def drawplot(epochs, losses, title, setting):
+    plt.savefig(os.path.join(root_path, '/results_informer/' + setting + "/" + title + '.png'))
+    
+def drawplot(epochs, losses, title, setting, root_path):
     plt.plot(epochs, losses)
     plt.title(title)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.savefig('./results/' + setting + "/" + title + '.png')
     plt.show()
+    plt.savefig(os.path.join(root_path, '/results_informer/' + setting + "/" + title + '.png'))
+    
 
-# print(losses)
-first_loss = losses_all[0]
-print(first_loss)
-epochs = [f['epoch'] for f in first_loss]
-print(epochs)
-train_losses = [f['train_loss'] for f in first_loss]
-validation_losses = [f['validation_loss'] for f in first_loss]
-test_losses = [f['test_loss'] for f in first_loss]
+def run_experiments(run, run_type):
+    # run 1
+    args = dotdict()
+    args.target_config_list_ms = []
+    args.e_layers = 2 # num of encoder layers
+    args.d_layers = 1 # num of decoder layers
+    args.learning_rate = 0.00001 # 0.0001
+    args.train_epochs = 20
+    args.model_id = run_type + "_" + run
+    args.root_path = ""
+
+    error_metrics_all = []
+    losses_all = []
+    setting = ""
+
+    # Run 1
+    if run == "targets":
+        args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
+        args.target = 'stock_0' # target feature in S or MS task
+        args.features = 'M' # forecasting task, options:[M, S, MS];
+                                #M:multivariate predict multivariate, S:univariate predict univariate,
+                                #MS:multivariate predict univariate
+        m_feature_count = len(pd.read_csv("./dataset/stock_data_targets.csv").columns) - 1
+        args.target_config_list_m = [m_feature_count, m_feature_count, m_feature_count]
+        args.is_time_id = True
+        
+        error_metrics_targets, losses_run_1, setting = run_volatility(args)
+        error_metrics_all.append(error_metrics_targets)
+        losses_all.append(losses_run_1)
+
+    # run 2
+    if run == "tcn_targets":
+        if run_type == "similar":
+            args.data_path = 'similar_stock_data_tcn_targets.csv'
+        elif run_type == "dissimilar":
+            args.data_path = 'dissimilar_stock_data_tcn_targets.csv'
+        else:
+            args.data_path ='stock_data_tcn_targets.csv'
+        args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
+        args.target = 'stock_0_y' # target feature in S or MS task
+        args.features = 'M'
+        feature_count = len(pd.read_csv(os.path.join(args.root_path, args.data_path)).columns) - 1
+        args.target_config_list_m = [feature_count, feature_count, feature_count]
+        args.is_time_id = True
+        error_metrics_tcn, losses_run_2, setting = run_volatility(args)
+        error_metrics_all.append(error_metrics_tcn)
+        losses_all.append(losses_run_2)
+
+    # run 3
+    if run == "features":
+        args.data_path = 'stock_0_features.csv' #'output.csv' # data file
+        args.target = 'target' # target feature in S or MS task
+        args.features = 'MS'
+        args.target_config_list_ms = [9,9,1]
+        args.is_time_id = True
+        error_metrics_features, losses_run_3, setting = run_volatility(args)
+        error_metrics_all.append(error_metrics_features)
+        losses_all.append(losses_run_3)
+
+    print('error metrics all ', error_metrics_all)
+    error_metrics_df = pd.DataFrame(error_metrics_all)
+    print(error_metrics_df)
+    error_metrics_df.to_csv("./results/" + setting + "/error_metrics.csv", index=False)
+
+    losses_df = pd.DataFrame(losses_all[0])
+    losses_df.to_csv("./results/" + setting + "/losses.csv", index=False)
+
+    # print(losses)
+    first_loss = losses_all[0]
+    print(first_loss)
+    epochs = [f['epoch'] for f in first_loss]
+    print(epochs)
+    train_losses = [f['train_loss'] for f in first_loss]
+    validation_losses = [f['validation_loss'] for f in first_loss]
+    test_losses = [f['test_loss'] for f in first_loss]
 
 
-drawplots(epochs, train_losses, validation_losses, test_losses, 'Loss curves', setting)
-drawplot(epochs, train_losses, 'Train loss', setting)
-drawplot(epochs, validation_losses, 'Validation loss', setting)
-drawplot(epochs, test_losses, 'Test loss', setting)
+    drawplots(epochs, train_losses, validation_losses, test_losses, 'Loss curves', setting, args.root_path)
+    drawplot(epochs, train_losses, 'Train loss', setting, args.root_path)
+    drawplot(epochs, validation_losses, 'Validation loss', setting, args.root_path)
+    drawplot(epochs, test_losses, 'Test loss', setting, args.root_path)
+
+
+# make_directory(results_path)
+# tcn targets with similar nature of stocks
+run_experiments("tcn_targets", "similar")
