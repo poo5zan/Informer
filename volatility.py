@@ -1,4 +1,6 @@
 # reference: https://zenn.dev/ryo_tan/articles/5d03c0157501aa
+# this file is the replica of run.ipynb
+# it's easy to debug code in .py and run long running code here.
 
 import os
 import sys
@@ -31,7 +33,6 @@ def make_directory(dir_path):
         print('creating dir ', dir_path)
         os.mkdir(dir_path)
 
-
 def plot_predictions(trues, preds, start_index, step, num_plots, setting, root_path):
         num_rows = num_plots // 3
         num_cols = 3
@@ -56,8 +57,10 @@ def plot_predictions(trues, preds, start_index, step, num_plots, setting, root_p
 
 
         plt.tight_layout()
+        make_directory(os.path.join(root_path, "results_informer"))
+        make_directory(os.path.join(root_path, "results_informer", setting))
+        plt.savefig(os.path.join(root_path, 'results_informer/'+setting+'/prediction_plot.png'))
         plt.show()
-        plt.savefig(os.path.join(root_path, '/results_informer/'+setting+'/prediction_plot.png'))
         
 
 def run_volatility(args):    
@@ -162,7 +165,7 @@ def run_volatility(args):
 
     exp.predict(setting, True)
 
-    prediction = np.load( './results/'+setting+'/real_prediction.npy')
+    prediction = np.load('./results/'+setting+'/real_prediction.npy')
 
     prediction.shape
 
@@ -213,17 +216,20 @@ def drawplots(epochs, train_loss, validation_loss, test_loss,title, setting, roo
     plt.legend()
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
+    make_directory(os.path.join(root_path, "results_informer"))
+    make_directory(os.path.join(root_path, "results_informer", setting))
+    plt.savefig(os.path.join(root_path, 'results_informer', setting, title + '.png'))
     plt.show()
-    plt.savefig(os.path.join(root_path, '/results_informer/' + setting + "/" + title + '.png'))
     
 def drawplot(epochs, losses, title, setting, root_path):
     plt.plot(epochs, losses)
     plt.title(title)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
+    make_directory(os.path.join(root_path, "results_informer"))
+    make_directory(os.path.join(root_path, "results_informer", setting))
+    plt.savefig(os.path.join(root_path, 'results_informer', setting, title + '.png'))
     plt.show()
-    plt.savefig(os.path.join(root_path, '/results_informer/' + setting + "/" + title + '.png'))
-    
 
 def run_experiments(run, run_type):
     # run 1
@@ -234,7 +240,7 @@ def run_experiments(run, run_type):
     args.learning_rate = 0.00001 # 0.0001
     args.train_epochs = 20
     args.model_id = run_type + "_" + run
-    args.root_path = ""
+    args.root_path = "/Users/pujanmaharjan/uni adelaide/research project/realized-volatility/data/"
 
     error_metrics_all = []
     losses_all = []
@@ -242,13 +248,13 @@ def run_experiments(run, run_type):
 
     # Run 1
     if run == "targets":
-        args.data_path = 'stock_data_targets.csv' #'output.csv' # data file
-        args.target = 'stock_0' # target feature in S or MS task
-        args.features = 'M' # forecasting task, options:[M, S, MS];
+        args.data_path = 'stocks_targets_0.csv' #'output.csv' # data file
+        args.target = 'target' # target feature in S or MS task
+        args.features = 'S' # forecasting task, options:[M, S, MS];
                                 #M:multivariate predict multivariate, S:univariate predict univariate,
                                 #MS:multivariate predict univariate
-        m_feature_count = len(pd.read_csv("./dataset/stock_data_targets.csv").columns) - 1
-        args.target_config_list_m = [m_feature_count, m_feature_count, m_feature_count]
+        m_feature_count = len(pd.read_csv(os.path.join(args.root_path, args.data_path)).columns) - 1
+        args.target_config_list_m = [m_feature_count, m_feature_count, 1]
         args.is_time_id = True
         
         error_metrics_targets, losses_run_1, setting = run_volatility(args)
@@ -263,7 +269,6 @@ def run_experiments(run, run_type):
             args.data_path = 'dissimilar_stock_data_tcn_targets.csv'
         else:
             args.data_path ='stock_data_tcn_targets.csv'
-        args.data_path = 'stock_data_tcn_targets.csv' #'output.csv' # data file
         args.target = 'stock_0_y' # target feature in S or MS task
         args.features = 'M'
         feature_count = len(pd.read_csv(os.path.join(args.root_path, args.data_path)).columns) - 1
@@ -275,10 +280,11 @@ def run_experiments(run, run_type):
 
     # run 3
     if run == "features":
-        args.data_path = 'stock_0_features.csv' #'output.csv' # data file
+        args.data_path = 'stock_data_basic_features_stock_0.csv' #'output.csv' # data file
         args.target = 'target' # target feature in S or MS task
         args.features = 'MS'
-        args.target_config_list_ms = [9,9,1]
+        feature_count = len(pd.read_csv(os.path.join(args.root_path, args.data_path)).columns) - 1
+        args.target_config_list_ms = [feature_count,feature_count,1]
         args.is_time_id = True
         error_metrics_features, losses_run_3, setting = run_volatility(args)
         error_metrics_all.append(error_metrics_features)
@@ -287,10 +293,10 @@ def run_experiments(run, run_type):
     print('error metrics all ', error_metrics_all)
     error_metrics_df = pd.DataFrame(error_metrics_all)
     print(error_metrics_df)
-    error_metrics_df.to_csv("./results/" + setting + "/error_metrics.csv", index=False)
+    error_metrics_df.to_csv(os.path.join(args.root_path, 'results_informer',setting,'error_metrics.csv'), index=False)
 
     losses_df = pd.DataFrame(losses_all[0])
-    losses_df.to_csv("./results/" + setting + "/losses.csv", index=False)
+    losses_df.to_csv(os.path.join(args.root_path, 'results_informer', setting, 'losses.csv'), index=False)
 
     # print(losses)
     first_loss = losses_all[0]
@@ -307,7 +313,4 @@ def run_experiments(run, run_type):
     drawplot(epochs, validation_losses, 'Validation loss', setting, args.root_path)
     drawplot(epochs, test_losses, 'Test loss', setting, args.root_path)
 
-
-# make_directory(results_path)
-# tcn targets with similar nature of stocks
 run_experiments("tcn_targets", "similar")
